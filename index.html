@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procurement AI Flashcards</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;  /* Prevent scrollbars during animations */
+        }
+
+        .container {
+            width: 90%; /* Responsive width */
+            max-width: 500px; /* Maximum width */
+            position: relative;
+            perspective: 1000px; /*  For 3D effects */
+        }
+
+        .card-container {
+             position: relative; /* Make sure the card is positioned within the container */
+             width: 100%;
+             height: 350px;
+             display: flex; /* Use flexbox for centering content */
+             justify-content: center;
+             align-items: center;
+            
+        }
+
+        .card {
+            position: absolute; /* Absolute positioning for stacking and animation */
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 25px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.6s ease-in-out, opacity 0.4s ease-in-out; /* Smooth transitions */
+            backface-visibility: hidden; /* Hide back of card when rotated */
+            transform-style: preserve-3d; /* Important for 3D transforms */
+            
+            /* Add some 3D-ish styling */
+             transform: translateZ(0) scale(1); /* Start at default position */
+            
+        }
+       
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            text-transform: capitalize;
+        }
+
+        .card p {
+            font-size: 1rem;
+            color: #555;
+            line-height: 1.5;
+            flex-grow: 1; /* Let the description take up available space */
+            overflow: scroll;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            width: 80%; /* Responsive button width */
+            margin-left: auto;
+            margin-right: auto;
+
+        }
+      
+        .buttons button {
+            background-color: transparent;
+            border: none;
+            font-size: 2.5rem;  /* Larger icons */
+            cursor: pointer;
+            transition: transform 0.2s ease; /* Smooth scaling on hover/press */
+            padding: 10px; /* Add some padding for touch targets */
+            border-radius: 50%; /* Make them circular */
+        }
+
+        .buttons button#bad:hover,
+        .buttons button#bad:active {
+            transform: scale(1.2);
+            color: #e74c3c;
+        }
+      
+       .buttons button#good:hover,
+        .buttons button#good:active {
+            transform: scale(1.2);
+            color: #2ecc71;
+        }
+
+       /* Favorites List */
+       #favorites-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #favorites-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+       #favorites-list li:last-child {
+           border-bottom: none;
+       }
+
+       /* Animations */
+       .card.swipe-right {
+          transform: translateX(150%) rotate(30deg); /* Adjust as needed */
+          opacity: 0;
+       }
+
+       .card.swipe-left {
+          transform: translateX(-150%) rotate(-30deg); /* Adjust as needed */
+          opacity: 0;
+       }
+      
+      .favorites-button {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background-color: #3498db;
+          color: white;
+          padding: 10px 15px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          z-index: 10; /* Ensure it's above the cards */
+        }
+        .favorites-button:hover {
+          background-color: #2980b9;
+        }
+        .modal {
+              display: none;
+              position: fixed;
+              z-index: 100;
+              left: 0;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              overflow: auto;
+              background-color: rgba(0,0,0,0.4);
+          }
+          .modal-content {
+              background-color: #fefefe;
+              margin: 15% auto;
+              padding: 20px;
+              border: 1px solid #888;
+              width: 80%;
+              border-radius: 8px;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+          }
+          .close {
+              color: #aaa;
+              float: right;
+              font-size: 28px;
+              font-weight: bold;
+          }
+          .close:hover,
+          .close:focus {
+              color: black;
+              text-decoration: none;
+              cursor: pointer;
+          }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+      <button class="favorites-button" onclick="showFavorites()">&#x1F90D; List</button>
+
+        <div class="card-container">
+            </div>
+        <div class="buttons">
+            <button id="bad">&#x1F44E;</button>
+            <button id="good">&#x1F496;</button>
+        </div>
+    </div>
+
+   <div id="favoritesModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2>Favorited Companies</h2>
+      <ul id="favorites-list">
+        </ul>
+    </div>
+  </div>
+
+
+    <script>
+        // --- Data Loading and Preparation ---
+
+        function loadCompanies(callback) {
+            fetch('https://raw.githubusercontent.com/naufal-makarim/YC/refs/heads/main/profile.txt') //Fetch from profile.txt
+                .then(response => response.text())
+                .then(data => {
+                    const lines = data.trim().split('\n');
+                    const companies = lines.map(line => {
+                        const match = line.match(/(\d+\.)\s(.*?)\s*:\s*(.*)/);  //Regex to parse the format
+                        if (match) {
+                            return {
+                                id: match[1], //  "0."
+                                name: match[2], //  "lighthouz-ai"
+                                description: match[3] //  "Lighthouz AI is building..."
+                            };
+                        }
+                        return null; //  Handle potential parsing errors
+                    }).filter(company => company !== null); // Remove null entries
+
+                     // Shuffle the companies array randomly
+                    for (let i = companies.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [companies[i], companies[j]] = [companies[j], companies[i]]; // Swap elements
+                    }
+                  
+                    callback(companies);
+
+                })
+                .catch(error => {
+                    console.error('Error loading company data:', error);
+                    // Display an error message to the user
+                    alert('Failed to load company data. Please try again later.');
+                });
+        }
+
+
+       // --- Card Management ---
+       let currentCardIndex = 0;
+       let companiesData = [];
+       let favorites = [];
+       const cardContainer = document.querySelector('.card-container');
+
+       function createCard(company) {
+          const card = document.createElement('div');
+          card.classList.add('card');
+          card.innerHTML = `<h2>${company.name}</h2><p>${company.description}</p>`;
+          return card;
+        }
+
+      function displayNextCard() {
+        if (currentCardIndex < companiesData.length) {
+          const nextCard = createCard(companiesData[currentCardIndex]);
+          cardContainer.appendChild(nextCard);
+
+          // Force a reflow to ensure the transition works correctly
+          void nextCard.offsetWidth;
+
+          // Make the new card visible *after* adding it to the DOM
+          // This is crucial for the initial appearance animation.
+          nextCard.style.opacity = 1;
+            currentCardIndex++;
+
+        } else {
+          // No more cards - maybe display a message or restart?
+            cardContainer.innerHTML = '<div class="card"><h2>All done!</h2><p>You\'ve seen all the companies.</p></div>';
+        }
+      }
+
+
+
+        function handleSwipe(direction) {
+          const currentCard = document.querySelector('.card:last-child'); //Get the *topmost* card, which is last in the container.
+            if (!currentCard) return; // No card to swipe
+
+            if (direction === 'right') {
+                currentCard.classList.add('swipe-right');
+              favorites.push(companiesData[currentCardIndex -1]); // currentCardIndex already incresed.
+              console.log(favorites);
+            } else {
+                currentCard.classList.add('swipe-left');
+            }
+
+          // Remove the card after animation and display the next one
+          currentCard.addEventListener('transitionend', () => {
+                currentCard.remove();
+                displayNextCard();
+          }, { once: true }); // Use { once: true } to remove the listener after it runs
+        }
+
+        // --- Event Listeners ---
+
+        document.getElementById('bad').addEventListener('click', () => handleSwipe('left'));
+        document.getElementById('good').addEventListener('click', () => handleSwipe('right'));
+
+    //       // Touch event handling for swiping (mobile-friendly)
+    //   let touchStartX = 0;
+    //   let touchEndX = 0;
+
+    //   cardContainer.addEventListener('touchstart', (e) => {
+    //       touchStartX = e.touches[0].clientX;
+    //   }, { passive: true }); // Add { passive: true } for better scrolling performance
+
+    //   cardContainer.addEventListener('touchend', (e) => {
+    //       touchEndX = e.changedTouches[0].clientX;
+    //       handleTouchSwipe();
+    //   }, { passive: true });
+
+    //   function handleTouchSwipe() {
+    //     const swipeThreshold = 200; // Minimum distance for a swipe
+    //     const diff = touchStartX - touchEndX;
+
+    //     if (Math.abs(diff) > swipeThreshold) {
+    //       if (diff > 0) {
+    //         handleSwipe('left'); // Swipe left
+    //       } else {
+    //         handleSwipe('right'); // Swipe right
+    //       }
+    //     }
+    //   }
+
+
+      // --- Favorites List (Modal) ---
+
+    function showFavorites() {
+        const favoritesList = document.getElementById('favorites-list');
+        favoritesList.innerHTML = ''; // Clear previous list
+
+        if (favorites.length === 0) {
+            favoritesList.innerHTML = '<li>No companies favorited yet.</li>';
+        } else {
+          favorites.forEach(company => {
+              const listItem = document.createElement('li');
+              listItem.textContent = company.name;
+              favoritesList.appendChild(listItem);
+          });
+        }
+       document.getElementById('favoritesModal').style.display = 'block';
+    }
+    function closeModal() {
+        document.getElementById('favoritesModal').style.display = 'none';
+    }
+
+       // --- Initialization ---
+        loadCompanies(companies => {
+            companiesData = companies;
+            displayNextCard();  // Start displaying cards
+        });
+
+
+    </script>
+</body>
+
+</html>
