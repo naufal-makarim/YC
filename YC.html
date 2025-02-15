@@ -211,7 +211,7 @@
         // --- Data Loading and Preparation ---
 
         function loadCompanies(callback) {
-            fetch('https://raw.githubusercontent.com/naufal-makarim/YC/refs/heads/main/IDX.txt') //Fetch from profile.txt
+            fetch('https://raw.githubusercontent.com/naufal-makarim/YC/refs/heads/main/profile.txt') //Fetch from profile.txt
                 .then(response => response.text())
                 .then(data => {
                     const lines = data.trim().split('\n');
